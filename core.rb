@@ -1,4 +1,8 @@
 require 'io/console'
+require 'tty-prompt'
+require 'tty-cursor'
+require 'tty-screen'
+require 'colorize'
 
 class PomodoroTimer
   WORK_DURATION = 25 * 60  # 25 minutes in seconds
@@ -7,6 +11,8 @@ class PomodoroTimer
   POMODOROS_BEFORE_LONG_BREAK = 4
 
   def initialize
+    @prompt = TTY::Prompt.new
+    @cursor = TTY::Cursor
     @time_remaining = WORK_DURATION
     @running = false
     @completed_pomodoros = 0
@@ -93,24 +99,22 @@ class PomodoroTimer
   def handle_session_end
     next_session = @current_session.to_s.gsub('_', ' ').capitalize
     puts "\nNext session: #{next_session}"
-    puts "Press:"
-    puts "Enter - Start next session"
-    puts "s     - Skip next session"
-    puts "q     - Quit"
     
-    loop do
-      case STDIN.getch.downcase
-      when "\r", "\n"  # Enter key
-        @time_remaining = current_session_duration
-        @running = true  # Resume the timer
-        @last_tick = Time.now  # Reset the last tick time
-        return
-      when 's'
-        switch_session  # Skip to the following session
-        return
-      when 'q'
-        exit(0)
-      end
+    choice = @prompt.select("Choose your action:", {
+      'Start next session' => :start,
+      'Skip session' => :skip,
+      'Quit' => :quit
+    })
+
+    case choice
+    when :start
+      @time_remaining = current_session_duration
+      @running = true
+      @last_tick = Time.now
+    when :skip
+      switch_session
+    when :quit
+      exit(0)
     end
   end
 
@@ -125,15 +129,20 @@ class PomodoroTimer
   def display_timer
     minutes = (@time_remaining / 60).to_i
     seconds = (@time_remaining % 60).to_i
-    system('clear') || system('cls')
-    puts "\n=== Pomodoro Timer ==="
-    puts "Session: #{@current_session.to_s.gsub('_', ' ').capitalize}"
-    puts "Time Remaining: #{format('%02d:%02d', minutes, seconds)}"
-    puts "Completed Pomodoros: #{@completed_pomodoros}"
-    puts "\nControls:"
-    puts "p - pause/resume"
-    puts "r - reset current session"
-    puts "q - quit"
+    
+    print @cursor.clear_screen
+    print @cursor.move_to(0, 0)
+    
+    width = TTY::Screen.width
+    
+    puts "\n#{center_text('=== Pomodoro Timer ===').colorize(color: :red, mode: :bold)}"
+    puts center_text("Session: #{@current_session.to_s.gsub('_', ' ').capitalize}")
+    puts center_text("Time Remaining: #{format('%02d:%02d', minutes, seconds)}")
+    puts center_text("Completed Pomodoros: #{@completed_pomodoros}")
+    puts "\n#{center_text('Controls:').colorize(color: :light_red, mode: :bold)}"
+    puts center_text('p - pause/resume')
+    puts center_text('r - reset current session')
+    puts center_text('q - quit')
   end
 
   def notify_session_change
@@ -147,5 +156,10 @@ class PomodoroTimer
                   "Time's up! Time for a long break!"
               end
     puts "\n#{message}"
+  end
+
+  def center_text(text)
+    padding = [(TTY::Screen.width - text.length) / 2, 0].max
+    " " * padding + text
   end
 end
