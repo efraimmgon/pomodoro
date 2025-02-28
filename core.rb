@@ -150,7 +150,6 @@ class PomodoroTimer
   end
 
   def notify_session_change
-    puts "\a"  # System bell
     message = case @current_session
                 when :work
                   "Time's up! Time for work!"
@@ -159,6 +158,7 @@ class PomodoroTimer
                 when :long_break
                   "Time's up! Time for a long break!"
               end
+    system("say \"#{message}\"")
     puts "\n#{message}"
   end
 
