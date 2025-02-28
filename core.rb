@@ -137,7 +137,11 @@ class PomodoroTimer
     
     puts "\n#{center_text('=== Pomodoro Timer ===').colorize(color: :red, mode: :bold)}"
     puts center_text("Session: #{@current_session.to_s.gsub('_', ' ').capitalize}")
-    puts center_text("Time Remaining: #{format('%02d:%02d', minutes, seconds)}")
+    puts "\n"  # Add extra spacing
+    puts center_text("╔══════════════╗").colorize(:light_yellow)
+    puts center_text("║ #{format('%02d:%02d', minutes, seconds)} ║").colorize(:yellow)
+    puts center_text("╚══════════════╝").colorize(:light_yellow)
+    puts "\n"  # Add extra spacing
     puts center_text("Completed Pomodoros: #{@completed_pomodoros}")
     puts "\n#{center_text('Controls:').colorize(color: :light_red, mode: :bold)}"
     puts center_text('p - pause/resume')
