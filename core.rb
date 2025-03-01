@@ -24,27 +24,33 @@ class PomodoroTimer
     @daily_stats = load_daily_stats
   end
 
+  # Starts the Pomodoro timer and begins the main timer loop
   def start
     @running = true
     @last_tick = Time.now
     run_timer_loop
   end
 
+  # Pauses the current timer session
   def pause
     @running = false
   end
 
+  # Resumes the paused timer session
   def resume
     @running = true
     @last_tick = Time.now
   end
 
+  # Resets the current session timer to its original duration
   def reset
     @time_remaining = current_session_duration
   end
 
   private
 
+  # Main timer loop that handles user input and updates the display
+  # Runs continuously until the program is terminated
   def run_timer_loop
     loop do
       handle_input
@@ -56,6 +62,7 @@ class PomodoroTimer
     end
   end
 
+  # Handles keyboard input for timer controls
   def handle_input
     if IO.select([STDIN], nil, nil, 0)
       case STDIN.getch.downcase
@@ -72,6 +79,8 @@ class PomodoroTimer
     end
   end
 
+  # Updates the remaining time based on elapsed time since last tick
+  # Switches to next session when timer reaches zero
   def update_timer
     current_time = Time.now
     elapsed = current_time - @last_tick
@@ -84,6 +93,8 @@ class PomodoroTimer
     end
   end
 
+  # Switches between work and break sessions
+  # Updates statistics and handles session transitions
   def switch_session
     if @current_session == :work
       @completed_pomodoros += 1
@@ -102,6 +113,7 @@ class PomodoroTimer
     handle_session_end
   end
 
+  # Handles the end of a session by prompting user for next action
   def handle_session_end
     next_session = @current_session.to_s.gsub('_', ' ').capitalize
     puts "\nNext session: #{next_session}"
@@ -124,6 +136,8 @@ class PomodoroTimer
     end
   end
 
+  # Returns the duration for the current session type
+  # @return [Integer] duration in seconds
   def current_session_duration
     case @current_session
       when :work then WORK_DURATION
@@ -132,6 +146,7 @@ class PomodoroTimer
     end
   end
 
+  # Displays the timer interface including countdown, session info, and controls
   def display_timer
     minutes = (@time_remaining / 60).to_i
     seconds = (@time_remaining % 60).to_i
@@ -159,6 +174,7 @@ class PomodoroTimer
     display_stats if @show_stats
   end
 
+  # Sends a system notification when switching between sessions
   def notify_session_change
     message = case @current_session
                 when :work
@@ -172,18 +188,24 @@ class PomodoroTimer
     puts "\n#{message}"
   end
 
+  # Centers text in the terminal window
+  # @param text [String] the text to center
+  # @return [String] the centered text with appropriate padding
   def center_text(text)
     padding = [(TTY::Screen.width - text.length) / 2, 0].max
     " " * padding + text
   end
 
+  # Loads daily statistics from the JSON file
+  # @return [Hash] daily statistics with dates as keys and completed sessions as values
   def load_daily_stats
     return {} unless File.exist?(STATS_FILE)
     JSON.parse(File.read(STATS_FILE))
-  rescue JSON::ParserError
-    {}
+    rescue JSON::ParserError
+      {}
   end
 
+  # Updates the statistics for the current day
   def update_daily_stats
     today = Date.today.to_s
     @daily_stats[today] ||= 0
@@ -191,10 +213,12 @@ class PomodoroTimer
     save_daily_stats
   end
 
+  # Saves the daily statistics to the JSON file
   def save_daily_stats
     File.write(STATS_FILE, JSON.pretty_generate(@daily_stats))
   end
 
+  # Displays the statistics of completed sessions by date
   def display_stats
     puts "\n#{center_text('=== Statistics ===').colorize(color: :cyan, mode: :bold)}"
     if @daily_stats.empty?
