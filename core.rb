@@ -162,11 +162,11 @@ class PomodoroTimer
   def notify_session_change
     message = case @current_session
                 when :work
-                  "Time's up! Time for work!"
+                  "Time for work!"
                 when :short_break
-                  "Time's up! Time for a short break!"
+                  "Time for a short break!"
                 when :long_break
-                  "Time's up! Time for a long break!"
+                  "Time for a long break!"
               end
     system("say \"#{message}\"")
     puts "\n#{message}"
