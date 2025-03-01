@@ -3,12 +3,15 @@ require 'tty-prompt'
 require 'tty-cursor'
 require 'tty-screen'
 require 'colorize'
+require 'json'
+require 'date'
 
 class PomodoroTimer
   WORK_DURATION = 25 * 60  # 25 minutes in seconds
   SHORT_BREAK_DURATION = 5 * 60  # 5 minutes in seconds
   LONG_BREAK_DURATION = 15 * 60  # 15 minutes in seconds
   POMODOROS_BEFORE_LONG_BREAK = 4
+  STATS_FILE = 'pomodoro_stats.json'
 
   def initialize
     @prompt = TTY::Prompt.new
@@ -18,6 +21,7 @@ class PomodoroTimer
     @completed_pomodoros = 0
     @current_session = :work
     @last_tick = Time.now
+    @daily_stats = load_daily_stats
   end
 
   def start
@@ -63,6 +67,7 @@ class PomodoroTimer
         end
       when 'r' then reset
       when 'q' then exit(0)
+      when 's' then @show_stats = !@show_stats
       end
     end
   end
@@ -82,6 +87,7 @@ class PomodoroTimer
   def switch_session
     if @current_session == :work
       @completed_pomodoros += 1
+      update_daily_stats if @current_session == :work
       if @completed_pomodoros % POMODOROS_BEFORE_LONG_BREAK == 0
         @current_session = :long_break
       else
@@ -92,7 +98,7 @@ class PomodoroTimer
     end
     
     notify_session_change
-    @running = false  # Pause the timer before handling session end
+    @running = false
     handle_session_end
   end
 
@@ -137,16 +143,20 @@ class PomodoroTimer
     
     puts "\n#{center_text('=== Pomodoro Timer ===').colorize(color: :red, mode: :bold)}"
     puts center_text("Session: #{@current_session.to_s.gsub('_', ' ').capitalize}")
-    puts "\n"  # Add extra spacing
+    puts "\n"
     puts center_text("╔══════════════╗").colorize(:light_yellow)
     puts center_text("║ #{format('%02d:%02d', minutes, seconds)} ║").colorize(:yellow)
     puts center_text("╚══════════════╝").colorize(:light_yellow)
-    puts "\n"  # Add extra spacing
+    puts "\n"
     puts center_text("Completed Pomodoros: #{@completed_pomodoros}")
+    puts center_text("Today's Completed Sessions: #{@daily_stats[Date.today.to_s] || 0}")
     puts "\n#{center_text('Controls:').colorize(color: :light_red, mode: :bold)}"
     puts center_text('p - pause/resume')
     puts center_text('r - reset current session')
     puts center_text('q - quit')
+    puts center_text('s - show statistics')
+
+    display_stats if @show_stats
   end
 
   def notify_session_change
@@ -165,5 +175,34 @@ class PomodoroTimer
   def center_text(text)
     padding = [(TTY::Screen.width - text.length) / 2, 0].max
     " " * padding + text
+  end
+
+  def load_daily_stats
+    return {} unless File.exist?(STATS_FILE)
+    JSON.parse(File.read(STATS_FILE))
+  rescue JSON::ParserError
+    {}
+  end
+
+  def update_daily_stats
+    today = Date.today.to_s
+    @daily_stats[today] ||= 0
+    @daily_stats[today] += 1
+    save_daily_stats
+  end
+
+  def save_daily_stats
+    File.write(STATS_FILE, JSON.pretty_generate(@daily_stats))
+  end
+
+  def display_stats
+    puts "\n#{center_text('=== Statistics ===').colorize(color: :cyan, mode: :bold)}"
+    if @daily_stats.empty?
+      puts center_text('No stats yet')
+    else
+      @daily_stats.sort.reverse.each do |date, count|
+        puts center_text("#{date}: #{count} sessions")
+      end
+    end
   end
 end
